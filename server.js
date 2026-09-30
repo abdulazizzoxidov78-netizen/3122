@@ -4,6 +4,7 @@ const dns = require('dns');
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 const express = require('express');
+const cors = require('cors');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
@@ -35,6 +36,10 @@ const REFRESH_EXPIRES_IN =
 // EXPRESS
 // =========================
 
+// CORS
+app.use(cors());
+
+// JSON
 app.use(express.json());
 
 
@@ -163,10 +168,9 @@ const swaggerSpec = swaggerJsdoc({
         description: 'Local server'
       },
       {
-        url: `https://three122-1.onrender.com`,
-        description : 'Global server'
+        url: 'https://three122-1.onrender.com',
+        description: 'Global server'
       }
-
     ],
 
     components: {
@@ -250,7 +254,10 @@ const swaggerSpec = swaggerJsdoc({
         LoginRequest: {
           type: 'object',
 
-          required: ['email', 'password'],
+          required: [
+            'email',
+            'password'
+          ],
 
           properties: {
             email: {
@@ -270,7 +277,9 @@ const swaggerSpec = swaggerJsdoc({
         RefreshRequest: {
           type: 'object',
 
-          required: ['refreshToken'],
+          required: [
+            'refreshToken'
+          ],
 
           properties: {
             refreshToken: {
@@ -480,7 +489,9 @@ function revokeRefreshToken(userId, jti) {
 function isRefreshTokenActive(userId, jti) {
   const set = refreshTokenStore.get(userId);
 
-  return Boolean(set && set.has(jti));
+  return Boolean(
+    set && set.has(jti)
+  );
 }
 
 
@@ -510,7 +521,9 @@ function requireAuth(req, res, next) {
     );
 
     next();
+
   } catch (error) {
+
     return res.status(401).json({
       message:
         'Token yaroqsiz yoki muddati tugagan.'
@@ -594,7 +607,6 @@ app.post('/register', async (req, res) => {
       gender
     } = req.body;
 
-
     if (
       !email ||
       !password ||
@@ -608,7 +620,6 @@ app.post('/register', async (req, res) => {
       });
     }
 
-
     const existingEmail =
       await User.findOne({
         email: email.toLowerCase()
@@ -620,7 +631,6 @@ app.post('/register', async (req, res) => {
           'Bu email allaqachon mavjud.'
       });
     }
-
 
     const existingUsername =
       await User.findOne({
@@ -634,10 +644,8 @@ app.post('/register', async (req, res) => {
       });
     }
 
-
     const passwordHash =
       await bcrypt.hash(password, 10);
-
 
     const newUser = await User.create({
       email: email.toLowerCase(),
@@ -671,11 +679,9 @@ app.post('/register', async (req, res) => {
       isActive: true
     });
 
-
     console.log(
       `✅ Yangi user MongoDB ga saqlandi: ${newUser.email}`
     );
-
 
     return res.status(201).json({
       message:
@@ -735,11 +741,11 @@ app.post('/register', async (req, res) => {
 
 app.post('/login', async (req, res) => {
   try {
+
     const {
       email,
       password
     } = req.body;
-
 
     if (!email || !password) {
       return res.status(400).json({
@@ -748,11 +754,9 @@ app.post('/login', async (req, res) => {
       });
     }
 
-
     const user = await User.findOne({
       email: email.toLowerCase()
     });
-
 
     if (
       !user ||
@@ -767,7 +771,6 @@ app.post('/login', async (req, res) => {
       });
     }
 
-
     if (!user.isActive) {
       return res.status(403).json({
         message:
@@ -775,11 +778,9 @@ app.post('/login', async (req, res) => {
       });
     }
 
-
     user.lastLoginAt = new Date();
 
     await user.save();
-
 
     const accessToken =
       issueAccessToken(user);
@@ -787,11 +788,9 @@ app.post('/login', async (req, res) => {
     const refreshToken =
       issueRefreshToken(user);
 
-
     console.log(
       `✅ Login MongoDB user: ${user.email}`
     );
-
 
     res.json({
       message:
@@ -860,10 +859,10 @@ app.post('/login', async (req, res) => {
 
 app.post('/refresh', async (req, res) => {
   try {
+
     const {
       refreshToken
     } = req.body;
-
 
     if (!refreshToken) {
       return res.status(400).json({
@@ -872,22 +871,22 @@ app.post('/refresh', async (req, res) => {
       });
     }
 
-
     let payload;
 
-
     try {
+
       payload = jwt.verify(
         refreshToken,
         REFRESH_SECRET
       );
+
     } catch (error) {
+
       return res.status(401).json({
         message:
           'refreshToken yaroqsiz yoki muddati tugagan.'
       });
     }
-
 
     if (
       !isRefreshTokenActive(
@@ -901,10 +900,8 @@ app.post('/refresh', async (req, res) => {
       });
     }
 
-
     const user =
       await User.findById(payload.sub);
-
 
     if (!user || !user.isActive) {
       return res.status(401).json({
@@ -913,19 +910,16 @@ app.post('/refresh', async (req, res) => {
       });
     }
 
-
     revokeRefreshToken(
       payload.sub,
       payload.jti
     );
-
 
     const newAccessToken =
       issueAccessToken(user);
 
     const newRefreshToken =
       issueRefreshToken(user);
-
 
     res.json({
       message:
@@ -993,10 +987,10 @@ app.post('/refresh', async (req, res) => {
  */
 
 app.post('/logout', (req, res) => {
+
   const {
     refreshToken
   } = req.body;
-
 
   if (!refreshToken) {
     return res.status(400).json({
@@ -1005,20 +999,18 @@ app.post('/logout', (req, res) => {
     });
   }
 
-
   try {
+
     const payload =
       jwt.verify(
         refreshToken,
         REFRESH_SECRET
       );
 
-
     revokeRefreshToken(
       payload.sub,
       payload.jti
     );
-
 
   } catch (error) {
 
@@ -1027,7 +1019,6 @@ app.post('/logout', (req, res) => {
         'refreshToken yaroqsiz.'
     });
   }
-
 
   res.json({
     message:
@@ -1065,6 +1056,7 @@ app.get(
   '/me',
   requireAuth,
   async (req, res) => {
+
     try {
 
       const user =
@@ -1072,14 +1064,12 @@ app.get(
           req.auth.sub
         );
 
-
       if (!user) {
         return res.status(404).json({
           message:
             'Foydalanuvchi topilmadi.'
         });
       }
-
 
       res.json({
         user: publicUser(user)
@@ -1121,8 +1111,6 @@ async function startServer() {
 
   try {
 
-    // MongoDB URI tekshirish
-
     if (!MONGO_URI) {
 
       console.error(
@@ -1132,13 +1120,9 @@ async function startServer() {
       process.exit(1);
     }
 
-
-    // MongoDB ulanish
-
     await mongoose.connect(
       MONGO_URI
     );
-
 
     console.log(
       '===================================='
@@ -1155,9 +1139,6 @@ async function startServer() {
     console.log(
       '===================================='
     );
-
-
-    // Server
 
     app.listen(
       PORT,
@@ -1176,7 +1157,6 @@ async function startServer() {
         );
       }
     );
-
 
   } catch (error) {
 
