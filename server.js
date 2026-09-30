@@ -161,7 +161,12 @@ const swaggerSpec = swaggerJsdoc({
       {
         url: `http://localhost:${PORT}`,
         description: 'Local server'
+      },
+      {
+        url: `https://three122-1.onrender.com`,
+        description : 'Global server'
       }
+
     ],
 
     components: {
